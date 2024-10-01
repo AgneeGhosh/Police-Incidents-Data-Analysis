@@ -1,0 +1,294 @@
+---
+title: "Police Incidents in SF from 2018 to Present"
+author: "Agnee Ghosh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 7, fig.height = 5)
+
+library(tidyverse)
+library(sf)        # For working with spatial data
+library(leaflet)   # For interactive mapping
+library(lubridate) # For date-time manipulation
+library(ggplot2)   # For general data visualization
+library(dplyr)     # For data manipulation
+library(janitor)   # For data cleaning
+library(treemapify)
+
+# Load your dataset
+incident_data <- read_csv("Police_Department_Incident_Reports__2018_to_Present.csv")
+
+# Clean column names
+incident_data <- clean_names(incident_data)
+
+# Check the structure of the data
+glimpse(incident_data)
+
+# Convert the incident_datetime and report_datetime to datetime objects
+incident_data <- incident_data %>%
+  mutate(incident_datetime = ymd_hms(incident_datetime),
+         report_datetime = ymd_hms(report_datetime),
+         incident_date = as.Date(incident_date),   # Ensure date column is in date format
+         incident_time = hms(incident_time))       # Convert time to time format if available
+
+# Extract year, month, and day of the week from the datetime
+incident_data <- incident_data %>%
+  mutate(incident_year = year(incident_datetime),
+         incident_month = month(incident_datetime, label = TRUE),  # Use label = TRUE for month name
+         incident_day_of_week = wday(incident_datetime, label = TRUE),  # Label for day names
+         incident_hour = hour(incident_datetime))  # Extract hour for time of day analysis
+
+# Group by year and count the number of incidents
+yearly_trends <- incident_data %>%
+  group_by(incident_year) %>%
+  summarize(total_incidents = n())
+
+# Plot incidents by year
+ggplot(yearly_trends, aes(x = incident_year, y = total_incidents)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Incident Trends by Year", x = "Year", y = "Number of Incidents") +
+  theme_minimal()
+
+# Group by month and count the number of incidents
+monthly_trends <- incident_data %>%
+  group_by(incident_month) %>%
+  summarize(total_incidents = n())
+
+# Plot incidents by month
+ggplot(monthly_trends, aes(x = incident_month, y = total_incidents)) +
+  geom_col() +
+  labs(title = "Incident Trends by Month", x = "Month", y = "Number of Incidents") +
+  theme_minimal()
+
+# Group by day of the week and count the number of incidents
+day_of_week_trends <- incident_data %>%
+  group_by(incident_day_of_week) %>%
+  summarize(total_incidents = n())
+
+# Plot incidents by day of the week
+ggplot(day_of_week_trends, aes(x = incident_day_of_week, y = total_incidents)) +
+  geom_col() +
+  labs(title = "Incident Trends by Day of the Week", x = "Day of Week", y = "Number of Incidents") +
+  theme_minimal()
+
+# Group by hour and count the number of incidents
+hourly_trends <- incident_data %>%
+  group_by(incident_hour) %>%
+  summarize(total_incidents = n())
+
+# Plot incidents by hour
+ggplot(hourly_trends, aes(x = incident_hour, y = total_incidents)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Incident Trends by Hour of Day", x = "Hour of Day", y = "Number of Incidents") +
+  theme_minimal()
+
+# Calculate the time difference between incident and report
+incident_data <- incident_data %>%
+  mutate(reporting_delay = difftime(report_datetime, incident_datetime, units = "hours"))
+
+# Summary of the reporting delay
+summary(incident_data$reporting_delay)
+
+# Group by year to see how reporting delays vary over time
+reporting_delay_trend <- incident_data %>%
+  group_by(incident_year) %>%
+  summarize(average_reporting_delay = mean(reporting_delay, na.rm = TRUE))
+
+# Plot the reporting delay over time
+ggplot(reporting_delay_trend, aes(x = incident_year, y = average_reporting_delay)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Average Reporting Delay by Year", x = "Year", y = "Average Delay (hours)") +
+  theme_minimal()
+
+# Group by year and month to explore seasonal patterns
+seasonal_trends <- incident_data %>%
+  group_by(incident_year, incident_month) %>%
+  summarize(total_incidents = n())
+
+# Plot the seasonal pattern
+ggplot(seasonal_trends, aes(x = incident_month, y = total_incidents, group = incident_year, color = as.factor(incident_year))) +
+  geom_line() +
+  labs(title = "Seasonal Incident Trends by Year", x = "Month", y = "Number of Incidents", color = "Year") +
+  theme_minimal()
+
+# Analyze the most common incident categories
+incident_category_summary <- incident_data %>%
+  group_by(incident_category) %>%
+  summarize(total_incidents = n()) %>%
+  arrange(desc(total_incidents))
+
+# View the top incident categories
+print(incident_category_summary)
+
+# Filter top 10 incident categories
+top_10_incident_categories <- incident_category_summary %>%
+  top_n(10, total_incidents)
+
+# Plot the top 10 incident categories
+ggplot(top_10_incident_categories, aes(x = reorder(incident_category, -total_incidents), y = total_incidents)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +  # Flip for readability
+  labs(title = "Top 10 Most Common Incident Categories", x = "Incident Category", y = "Total Incidents") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 12))  # Adjust text size for readability
+
+# Analyze subcategories of incidents
+incident_subcategory_summary <- incident_data %>%
+  group_by(incident_subcategory) %>%
+  summarize(total_incidents = n()) %>%
+  arrange(desc(total_incidents))
+
+# View the top incident subcategories
+print(incident_subcategory_summary)
+
+# Select the top 10 incident subcategories
+top_10_subcategories <- incident_subcategory_summary %>%
+  top_n(10, total_incidents)  # Select top 10 subcategories
+
+# Plot the number of incidents by top 10 subcategories
+ggplot(top_10_subcategories, aes(x = reorder(incident_subcategory, -total_incidents), y = total_incidents)) +
+  geom_col(fill = "lightblue") +
+  coord_flip() +  # Flip for readability
+  labs(title = "Top 10 Incident Subcategories", x = "Incident Subcategory", y = "Total Incidents") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 12))  # Adjust text size for readability
+
+
+# Search for incidents with 'theft' in the description
+theft_incidents <- incident_data %>%
+  filter(str_detect(incident_description, regex("theft", ignore_case = TRUE)))
+
+# View a summary of theft incidents
+print(theft_incidents)
+
+# Group theft incidents by neighborhood and count the total number
+theft_trends_by_neighborhood <- theft_incidents %>%
+  group_by(analysis_neighborhood) %>%
+  summarize(total_theft_incidents = n()) %>%
+  arrange(desc(total_theft_incidents))  # Sort by most incidents
+
+# Plot the top 10 neighborhoods with the most theft incidents
+ggplot(theft_trends_by_neighborhood %>% top_n(10, total_theft_incidents), 
+       aes(x = reorder(analysis_neighborhood, -total_theft_incidents), y = total_theft_incidents)) +
+  geom_col(fill = "lightblue") +
+  coord_flip() +  # Flip for better readability of neighborhood names
+  labs(title = "Top 10 Neighborhoods for Theft Incidents", x = "Neighborhood", y = "Number of Theft Incidents") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+# Group theft incidents by hour and count the total number
+theft_trends_by_hour <- theft_incidents %>%
+  group_by(incident_hour) %>%
+  summarize(total_theft_incidents = n())
+
+# Plot theft incidents by hour of the day
+ggplot(theft_trends_by_hour, aes(x = incident_hour, y = total_theft_incidents)) +
+  geom_line(color = "purple", size = 1.2) +
+  geom_point(color = "orange", size = 2) +
+  labs(title = "Theft Incidents by Hour of Day", x = "Hour of Day", y = "Number of Theft Incidents") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+# Search for 'assault' in the description
+assault_incidents <- incident_data %>%
+  filter(str_detect(incident_description, regex("assault", ignore_case = TRUE)))
+
+# View a summary of assault incidents
+print(assault_incidents)
+
+# Group by neighborhood and count the number of incidents, then select the top 10
+top_10_neighborhoods <- assault_incidents %>%
+  group_by(analysis_neighborhood) %>%
+  summarize(total_assaults = n()) %>%
+  arrange(desc(total_assaults)) %>%
+  top_n(10, total_assaults)  # Select top 10 neighborhoods
+
+# Plot the number of assault incidents by top 10 neighborhoods
+ggplot(top_10_neighborhoods, aes(x = reorder(analysis_neighborhood, -total_assaults), y = total_assaults)) +
+  geom_col(fill = "lightgreen") +
+  coord_flip() +  # Flip for readability
+  labs(title = "Top 10 Neighborhoods by Assault Incidents", x = "Neighborhood", y = "Total Assault Incidents") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 12))  # Adjust text size for readability
+
+
+# Count the number of 'theft' incidents
+theft_count <- theft_incidents %>%
+  summarize(total_theft_incidents = n())
+print(theft_count)
+
+# Count the number of 'assault' incidents
+assault_count <- assault_incidents %>%
+  summarize(total_assault_incidents = n())
+print(assault_count)
+
+# Analyze incidents filed online
+online_reports <- incident_data %>%
+  filter(filed_online == TRUE) %>%
+  group_by(incident_category) %>%
+  summarize(total_incidents = n()) %>%
+  arrange(desc(total_incidents))
+
+# Analyze incidents filed by officers (not online)
+officer_reports <- incident_data %>%
+  filter(filed_online == FALSE) %>%
+  group_by(incident_category) %>%
+  summarize(total_incidents = n()) %>%
+  arrange(desc(total_incidents))
+
+# Compare incidents reported online vs. by officers
+online_vs_officer <- bind_rows(
+  online_reports %>% mutate(report_type = "Online"),
+  officer_reports %>% mutate(report_type = "Officer")
+)
+
+# Plot comparison of online vs officer-reported incidents
+ggplot(online_vs_officer, aes(x = reorder(incident_category, -total_incidents), y = total_incidents, fill = report_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Comparison of Online vs. Officer-Reported Incidents", x = "Incident Category", y = "Number of Incidents", fill = "Report Type") +
+  theme_minimal()
+
+resolution_rate <- incident_data %>%
+  group_by(incident_category, resolution) %>%
+  summarize(total_resolved = n())
+
+# Calculate percentage of incidents resolved for each category
+resolution_rate <- resolution_rate %>%
+  mutate(resolution_percentage = total_resolved / sum(total_resolved) * 100)
+
+# Filter top 5 incident categories based on total incidents
+top_categories <- resolution_rate %>%
+  group_by(incident_category) %>%
+  summarize(total_incidents = sum(total_resolved)) %>%
+  arrange(desc(total_incidents)) %>%
+  top_n(5, total_incidents)
+
+# Filter the resolution data to only include the top categories
+filtered_resolution_rate <- resolution_rate %>%
+  filter(incident_category %in% top_categories$incident_category)
+
+# Define pastel colors for resolution categories
+pastel_colors <- c("#FDB4B4", "#B5EAD7", "#FFDAC1", "#C7CEEA")
+
+# Visualization: Simplified resolution rate plot for top categories with pastel colors
+ggplot(filtered_resolution_rate, aes(x = reorder(incident_category, resolution_percentage), y = resolution_percentage, fill = resolution)) +
+  geom_col() +
+  coord_flip() +  # Flip for better readability
+  scale_fill_manual(values = pastel_colors) +  # Apply pastel color palette
+  labs(title = "Top 5 Incident Resolution Rates by Category", 
+       x = "Incident Category", 
+       y = "Resolution Percentage") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold"),  # Increase title size
+        axis.title = element_text(size = 14),  # Adjust axis label sizes
+        axis.text = element_text(size = 12))  # Adjust axis tick sizes
