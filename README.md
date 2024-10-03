@@ -1,11 +1,13 @@
 # Police Incidents in San Francisco (2018–Present)
 
-This project analyzes police incidents in San Francisco from 2018 to the present. Below is the step-by-step methodology implemented using R for data processing, visualization, and analysis. Each section of the code corresponds to a different aspect of the dataset.
+This project analyzes police incidents in San Francisco from 2018 to the present. Below is the step-by-step methodology implemented using R for data processing, visualization, and analysis. Each section of the code corresponds to a different aspect of the dataset. 
 
 ## 1. Data Import and Cleaning
 Dataset: The dataset was loaded using read_csv().
 Column Cleaning: Column names were standardized using clean_names() from the janitor package.
 Datetime Formatting: Columns such as incident_datetime and report_datetime were converted to proper datetime formats using lubridate::ymd_hms(). The incident date was converted to a date format, and incident time was handled using hms().
+
+
 
 ## 2. Feature Engineering
 Date Features: New features such as year, month, day of the week, and hour were extracted from the incident_datetime column using lubridate functions (year(), month(), wday(), hour()).
