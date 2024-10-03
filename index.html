@@ -1,10 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Jekyll Site</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Police Incidents in San Francisco (2018–Present)</title>
 </head>
 <body>
-  <h1>Welcome to My GitHub Pages Site!</h1>
-  <p>This is the homepage of my Jekyll site hosted on GitHub Pages.</p>
+    <h1>Police Incidents in San Francisco (2018–Present)</h1>
+    <p>This project analyzes police incidents in San Francisco from 2018 to the present. Below is the step-by-step methodology implemented using R for data processing, visualization, and analysis. Each section of the code corresponds to a different aspect of the dataset.</p>
+
+    <h2>1. Data Import and Cleaning</h2>
+    <p><strong>Dataset:</strong> The dataset was loaded using <code>read_csv()</code>. <strong>Column Cleaning:</strong> Column names were standardized using <code>clean_names()</code> from the janitor package. <strong>Datetime Formatting:</strong> Columns such as <code>incident_datetime</code> and <code>report_datetime</code> were converted to proper datetime formats using <code>lubridate::ymd_hms()</code>. The incident date was converted to a date format, and incident time was handled using <code>hms()</code>.</p>
+
+    <h2>2. Feature Engineering</h2>
+    <p><strong>Date Features:</strong> New features such as year, month, day of the week, and hour were extracted from the <code>incident_datetime</code> column using <code>lubridate</code> functions (<code>year()</code>, <code>month()</code>, <code>wday()</code>, <code>hour()</code>). These additional features were useful in exploring temporal trends.</p>
+
+    <h2>3. Yearly Trends Analysis</h2>
+    <p>The dataset was grouped by year using <code>group_by(incident_year)</code>, and the total number of incidents per year was calculated using <code>summarize()</code>. <strong>Visualization:</strong> A line plot was generated using <code>ggplot2</code> to visualize trends in incident counts over time.</p>
+
+    <h2>4. Geospatial Analysis</h2>
+    <p><strong>Spatial Data:</strong> For mapping incidents, <code>leaflet</code> was employed to create interactive maps showing the geographic distribution of incidents. <strong>Neighborhood Analysis:</strong> Incident data was analyzed across various neighborhoods, and a heatmap was created using <code>leaflet</code> to highlight incident concentrations.</p>
+
+    <h2>5. Incident Type and Time of Day Analysis</h2>
+    <p><strong>Incident Types:</strong> The data was grouped by incident types using <code>dplyr::group_by()</code> to calculate the frequency of each type of incident. <strong>Visualization:</strong> A bar plot was created to visualize the distribution of incident types. <strong>Time of Day:</strong> Incidents were analyzed by hour of the day to understand when incidents were most frequent.</p>
+
+    <h2>6. Resolution Analysis</h2>
+    <p>Resolutions of incidents (e.g., arrest, citation) were analyzed to examine the outcomes of incidents using summary functions like <code>summarize()</code>.</p>
+
+    <h2>Conclusion</h2>
+    <p>This R-based workflow demonstrates a comprehensive methodology for cleaning, transforming, and analyzing police incident data in San Francisco. Key insights were derived from both temporal and spatial trends, which were further visualized using various R packages such as <code>ggplot2</code> and <code>leaflet</code>.</p>
 </body>
 </html>
