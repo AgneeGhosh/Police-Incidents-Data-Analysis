@@ -1,1 +1,50 @@
+# Basic site settings
+title: "Police Incidents Data Analysis"
+description: "Exploration of Police Incidents from 2018-Present"
+url: "https://agneeghosh.github.io/Police-Incidents-Data-Analysis/"        # Replace with your actual site URL
+baseurl: ""                          # Leave empty unless your site is hosted in a subdirectory
 
+# Author information
+author:
+  name: "Agnee Ghosh"                  
+  email: "agnee.ghosh@gmail.com"           
+
+# Theme setting
+theme: jekyll-theme-minimal          
+
+# Markdown and text settings
+markdown: kramdown                   
+highlighter: rouge                    
+permalink: pretty 
+
+# Plugins
+plugins:
+  - jekyll-feed                     
+  - jekyll-seo-tag                   
+
+# Pagination settings
+paginate: 10                         
+paginate_path: "/page/:num/"        
+
+# Exclude files and directories from the build
+exclude:                            
+  - README.md
+  - Gemfile
+  - node_modules
+
+# Include specific files in the build
+include:                             
+  - .htaccess
+
+# Default front-matter for posts
+defaults:
+  - scope:
+      path: ""                      
+      type: "posts"                  
+    values:
+      layout: "post"
+      author: "Default Author"
+
+# GitHub Pages settings
+github:
+  is_project_page: true
